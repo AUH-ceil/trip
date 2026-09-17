@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang='zh-CN'>
+<head>
+<meta charset='UTF-8'>
+<meta name='viewport' content='width=device-width,initial-scale=1.0'>
+<title>TripAgent - AI智能旅行规划</title>
+<script src='https://cdn.tailwindcss.com'></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f7ff;color:#1e293b;}
+.topbar{background:linear-gradient(135deg,#0ea5e9,#6366f1);color:white;padding:20px;text-align:center}
+.topbar h1{font-size:26px;font-weight:700}
+.topbar p{font-size:13px;opacity:.85;margin-top:4px}
+.nav{background:white;border-bottom:1px solid #e2e8f0;display:flex;overflow-x:auto;position:sticky;top:0;z-index:50}
+.nav button{padding:14px 18px;border:none;background:none;color:#64748b;font-size:14px;cursor:pointer;white-space:nowrap;border-bottom:3px solid transparent;font-family:inherit;transition:.2s}
+.nav button:hover{color:#6366f1}
+.nav button.active{color:#6366f1;border-bottom-color:#6366f1;font-weight:600}
+.main{max-width:1100px;margin:0 auto;padding:20px}
+.sec{display:none}
+.sec.active{display:block}
+.card{background:white;border-radius:14px;padding:22px;box-shadow:0 2px 12px rgba(0,0,0,.06);margin-bottom:18px}
+.card h3{font-size:17px;font-weight:600;margin-bottom:14px;color:#1e293b;border-left:4px solid #6366f1;padding-left:12px}
+label{display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:4px}
+input,select,textarea{width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;outline:none;margin-bottom:12px;font-family:inherit;transition:.2s}
+input:focus,select:focus,textarea:focus{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.15)}
+textarea{resize:vertical;min-height:70px}
+.row{display:flex;gap:10px;margin-bottom:10px;align-items:center}
+.row input{flex:1;margin-bottom:0}
+.btn{padding:10px 22px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:.2s;font-family:inherit;display:inline-flex;align-items:center;gap:6px}
+.btn-pri{background:linear-gradient(135deg,#0ea5e9,#6366f1);color:white}
+.btn-pri:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(99,102,241,.4)}
+.btn-suc{background:#10b981;color:white}
+.btn-suc:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(16,185,129,.3)}
+.btn-out{background:transparent;border:1.5px solid #e2e8f0;color:#475569}
+.btn-out:hover{border-color:#6366f1;color:#6366f1}
+.btn-del{background:transparent;border:1.5px solid #e2e8f0;color:#ef4444}
+.btn-del:hover{border-color:#ef4444;background:#fef2f2}
+.btn-sm{padding:7px 16px;font-size:13px}
+.result-box{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:18px;margin-top:14px;display:none;font-size:14px;line-height:1.8;max-height:550px;overflow-y:auto}
+.result-box.show{display:block}
+.result-box pre{white-space:pre-wrap;margin:0;font-family:inherit}
+.loading{display:none;align-items:center;gap:10px;margin:14px 0;padding:14px 18px;background:#eff6ff;border-radius:10px;color:#6366f1;font-size:14px}
+.loading.show{display:flex}
+.spinner{width:22px;height:22px;border:3px solid #c7d2fe;border-top-color:#6366f1;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.tag{display:inline-block;padding:3px 12px;border-radius:14px;font-size:12px;margin-right:6px;margin-bottom:4px;font-weight:500}
+.tag-pri{background:#eef2ff;color:#4f46e5}
+.tag-suc{background:#ecfdf5;color:#059669}
+.tag-warn{background:#fffbeb;color:#d97706}
+.tag-info{background:#f1f5f9;color:#475569}
+.trip-item{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:8px;cursor:pointer;transition:.2s}
+.trip-item:hover{border-color:#6366f1;background:#f8fafc}
+.trip-info{flex:1}
+.trip-name{font-weight:600;color:#1e293b}
+.trip-meta{font-size:12px;color:#64748b;margin-top:2px}
+.trip-actions{display:flex;gap:6px}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:20px}
+.stat-card{background:white;border-radius:10px;padding:16px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.stat-value{font-size:22px;font-weight:700;color:#6366f1}
+.stat-label{font-size:12px;color:#64748b;margin-top:2px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{padding:10px 12px;text-align:left;background:#f1f5f9;font-size:13px;color:#475569;border-bottom:2px solid #e2e8f0}
+td{padding:10px 12px;border-bottom:1px solid #e2e8f0}
+.empty-state{text-align:center;padding:40px 20px;color:#94a3b8}
+.empty-state .icon{font-size:48px;margin-bottom:10px}
+.weather-card{background:linear-gradient(135deg,#e0f2fe,#ede9fe);border-radius:12px;padding:16px;margin-bottom:10px}
+.weather-date{font-weight:600;font-size:15px}
+.weather-temp{font-size:18px;font-weight:700;margin:4px 0}
+.weather-info{font-size:13px;color:#475569}
+.wardrobe-card{background:linear-gradient(135deg,#fef3c7,#fce7f3);border-radius:12px;padding:16px;margin-top:12px}
+.wardrobe-card h4{font-size:15px;font-weight:600;margin-bottom:6px}
+.wardrobe-card p{font-size:13px;line-height:1.6;color:#475569}
+.map-item{padding:14px;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:10px}
+.map-item h4{font-weight:600;font-size:15px;color:#1e293b}
+.map-item p{font-size:13px;color:#64748b;margin-top:4px}
+.map-item .coord{font-size:12px;color:#94a3b8;margin-top:2px}
+@media(max-width:640px){.main{padding:12px}.card{padding:16px}.nav button{padding:12px 14px;font-size:13px}.topbar h1{font-size:22px}.row{flex-wrap:wrap}}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:#f1f5f9}
+::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}
+</style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+#map-container{height:420px;width:100%;border-radius:10px;margin-top:14px;display:none;z-index:1}
+.map-item{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;margin-bottom:8px}
+.map-item h4{font-weight:600;color:#1e293b;margin-bottom:4px}
+.map-item p{font-size:13px;color:#475569;margin:2px 0}
+.map-item .coord{font-size:12px;color:#94a3b8;font-family:monospace}
+</style>
+</head>
+<body>
+<!-- Top Bar -->
+<div class='topbar'>
+<h1>✈️ TripAgent</h1>
+<p>AI智能旅行规划 · 天气查询 · 预算分摊 · PDF导出</p>
+</div>
+
+<!-- Navigation -->
+<div class='nav' id='navBar'>
+<button class='active' data-tab='tab-trip' onclick='switchTab("tab-trip")'>✏️ 行程生成</button>
+<button data-tab='tab-weather' onclick='switchTab("tab-weather")'>☁️ 天气+穿搭</button>
+<button data-tab='tab-budget' onclick='switchTab("tab-budget")'>💰 预算分摊</button>
+<button data-tab='tab-map' onclick='switchTab("tab-map")'>🗺️ 景点检索</button>
+<button data-tab='tab-history' onclick='switchTab("tab-history")'>📋 历史行程</button>
+</div>
+
+<div class='main'>
+<!-- Tab 1: Trip Generation -->
+<div id='tab-trip' class='sec active'>
+<div class='card'>
+<h3>✏️ AI行程生成</h3>
+<label>目的地城市</label>
+<input id='t-city' placeholder='例如：北京、上海、东京、巴黎……'>
+<div class='grid grid-cols-1 md:grid-cols-3 gap-3'>
+<div><label>出行天数</label><input id='t-days' type='number' value='3' min='1' max='30'></div>
+<div><label>预算(元)</label><input id='t-budget' type='number' value='5000' min='0' step='500' placeholder='预算金额'></div>
+<div><label>人数</label><input id='t-people' type='number' value='2' min='1' max='100'></div>
+</div>
+<label>偏好说明</label>
+<select id='t-pref'>
+<option value='综合'>综合</option>
+<option value='美食'>美食</option>
+<option value='自然风光'>自然风光</option>
+<option value='人文历史'>人文历史</option>
+<option value='购物专场'>购物专场</option>
+</select>
+<div class='flex gap-2 mt-2'>
+<button class='btn btn-pri' onclick='generateTrip()'>🚀 生成行程</button>
+<button class='btn btn-out' onclick='saveTrip()' id='t-save-btn' style='display:none'>💾 保存行程</button>
+<button class='btn btn-out' onclick='exportPdfFromTrip()' id='t-pdf-btn' style='display:none'>📄 导出PDF</button>
+</div>
+<div class='loading' id='t-loading'><div class='spinner'></div>正在调用AI生成行程方案，请稍候……</div>
+</div>
+<div class='result-box' id='t-result'></div>
+</div>
+<!-- Tab 2: Weather + Wardrobe -->
+<div id='tab-weather' class='sec'>
+<div class='card'>
+<h3>☁️ 天气预报</h3>
+<div class='flex gap-2'>
+<input id='w-city' placeholder='输入城市名称，如北京' class='flex-1'>
+<button class='btn btn-pri' onclick='queryWeather()'>🔍 查询</button>
+</div>
+<div class='loading' id='w-loading'><div class='spinner'></div>正在查询天气……</div>
+</div>
+<div class='result-box' id='w-result'></div>
+<div class='card'>
+<h3>🧣 穿搭推荐</h3>
+<div class='flex gap-2'>
+<input id='wr-city' placeholder='输入城市名称' class='flex-1'>
+<button class='btn btn-suc' onclick='getWardrobe()'>🎭 穿搭推荐</button>
+</div>
+<div class='loading' id='wr-loading'><div class='spinner'></div>正在获取推荐……</div>
+</div>
+<div class='result-box' id='wr-result'></div>
+</div>
+<!-- Tab 3: Budget Split -->
+<div id='tab-budget' class='sec'>
+<div class='card'>
+<h3>💰 预算分摊计算器</h3>
+<label>分摊人数</label>
+<input id='b-ppl' type='number' value='2' min='1' max='1000'>
+<label>费用明细</label>
+<div id='b-items'>
+<div class='row'>
+<input class='b-name' placeholder='费用项目' value='餐饮'>
+<input class='b-amt' type='number' placeholder='金额(元)' value='0' min='0'>
+<button class='btn btn-del btn-sm' onclick='this.parentElement.remove()'>✖</button>
+</div>
+<div class='row'>
+<input class='b-name' placeholder='费用项目' value='门票'>
+<input class='b-amt' type='number' placeholder='金额(元)' value='0' min='0'>
+<button class='btn btn-del btn-sm' onclick='this.parentElement.remove()'>✖</button>
+</div>
+<div class='row'>
+<input class='b-name' placeholder='费用项目' value='住宿'>
+<input class='b-amt' type='number' placeholder='金额(元)' value='0' min='0'>
+<button class='btn btn-del btn-sm' onclick='this.parentElement.remove()'>✖</button>
+</div>
+</div>
+<div class='flex gap-2'>
+<button class='btn btn-out btn-sm' onclick='addBudgetItem()'>+ 添加项目</button>
+<button class='btn btn-pri' onclick='calcBudget()'>📊 计算分摊</button>
+</div>
+<div class='loading' id='b-loading'><div class='spinner'></div>计算中……</div>
+</div>
+<div class='result-box' id='b-result'></div>
+</div>
+<!-- Tab 4: Map/POI Search -->
+<div id='tab-map' class='sec'>
+<div class='card'>
+<h3>🗺 景点地图检索</h3>
+<div class='flex gap-2'>
+<input id='m-city' placeholder='输入城市名称，如北京' class='flex-1'>
+<select id='m-type' class='w-40'>
+<option value='热门景点'>热门景点</option>
+<option value='自然风光'>自然风光</option>
+<option value='历史古迹'>历史古迹</option>
+<option value='美食'>美食</option>
+<option value='购物'>购物</option>
+</select>
+<button class='btn btn-pri' onclick='searchMap()'>🔍 搜索</button>
+<button class='btn btn-suc' onclick='generateMap()'>🗺 AI生成地图</button>
+</div>
+<div class='loading' id='m-loading'><div class='spinner'></div>正在检索景点…</div>
+<div id='map-container'></div>
+</div>
+<div class='result-box' id='m-result'></div>
+<div id='llm-map-wrapper' style='display:none;margin-top:14px;border-radius:10px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08)'>
+<div style='display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:#f8fafc;border-bottom:1px solid #e2e8f0'>
+<span style='font-size:14px;font-weight:600;color:#1e293b'>🗺 AI 生成地图</span>
+<button class='btn btn-out btn-sm' onclick="document.getElementById('llm-map-wrapper').style.display='none'">✖ 关闭</button>
+</div>
+<iframe id='llm-map-frame' style='width:100%;height:620px;border:none;background:white'></iframe>
+</div>
+</div><!-- Tab 5: History -->
+<div id='tab-history' class='sec'>
+<div class='card'>
+<h3>📋 历史行程记录</h3>
+<div class='stats-grid' id='h-stats'></div>
+<div id='h-list'></div>
+<div id='h-detail' class='result-box' style='margin-top:14px'></div>
+</div>
+</div>
+</div><!-- end main -->
+<script>
+// === Configuration ===
+const API_BASE = 'http://127.0.0.1:8000';
+const API = { trip: API_BASE+'/api/trip', weather: API_BASE+'/api/weather', budget: API_BASE+'/api/budget', pdf: API_BASE+'/api/pdf', map: API_BASE+'/api/map', wardrobe: API_BASE+'/api/wardrobe' };
+
+// === Helpers ===
+const _ = id => document.getElementById(id);
+const qs = (el,sel) => (typeof el=='string'?_(el):el).querySelector(sel);
+
+async function apiFetch(url,opts={}){try{const r=await fetch(url,{...opts,headers:{'Content-Type':'application/json',...opts.headers}});if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.detail||e.message||'请求失败');}return await r.json()}catch(e){throw e}}
+
+function showLoading(id){_(id).classList.add('show')}
+function hideLoading(id){_(id).classList.remove('show')}
+function showResult(id,html){const el=_(id);el.innerHTML=html;el.classList.add('show')}
+function hideResult(id){_(id).classList.remove('show')}
+
+function alertMsg(msg,type='error'){const c=document.createElement('div');c.style.cssText='position:fixed;top:20px;right:20px;z-index:9999;padding:14px 20px;border-radius:10px;font-size:14px;font-weight:500;max-width:380px;box-shadow:0 4px 20px rgba(0,0,0,.15);animation:slideIn .3s ease;color:white;background:'+(type=='error'?'#ef4444':'#10b981');c.textContent=msg;document.body.appendChild(c);setTimeout(()=>{c.style.opacity='0';c.style.transition='opacity .3s';setTimeout(()=>c.remove(),300)},3000)}
+
+// Tab switching
+function switchTab(tabId){document.querySelectorAll('.sec').forEach(s=>s.classList.remove('active'));document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));_(tabId).classList.add('active');document.querySelector('.nav button[data-tab=\'+tabId+\']').classList.add('active')}
+
+// === Trip Generation ===
+let lastTripId = null;
+
+async function generateTrip(){
+  const city = _('t-city').value.trim();
+  const days = parseInt(_('t-days').value);
+  const budget = parseInt(_('t-budget').value) || 0;
+  const people = parseInt(_('t-people').value) || 1;
+  const pref = _('t-pref').value;
+  if(!city){alertMsg('请输入目的地城市');return}
+  if(days<1||days>30){alertMsg('天数范围1-30');return}
+  const combinedPref = '预算:'+budget+'元,'+'人数:'+people+'人,'+'偏好:'+pref;
+  hideResult('t-result');showLoading('t-loading');_('t-save-btn').style.display='none';_('t-pdf-btn').style.display='none';
+  try{
+    const d = await apiFetch(API.trip+'/generate',{method:'POST',body:JSON.stringify({destination:city,days:days,preferences:combinedPref,creator:'web_user'})});
+    lastTripId = d.id;
+    hideLoading('t-loading');
+    let html = '<div class="flex gap-2 mb-3 flex-wrap"><span class="tag tag-pri">'+d.destination+'</span><span class="tag tag-suc">'+d.days+'天</span><span class="tag tag-info">#'+d.id.slice(0,8)+'</span></div><pre>'+d.details+'</pre>';
+    showResult('t-result',html);
+    _('t-save-btn').style.display='inline-flex';
+    _('t-pdf-btn').style.display='inline-flex';
+  }catch(e){hideLoading('t-loading');alertMsg('行程生成失败：'+e.message)}
+}
+
+async function saveTrip(){alertMsg('行程已自动保存到数据库','success')}
+
+async function exportPdfFromTrip(){
+  if(!lastTripId){alertMsg('请先生成行程');return}
+  try{
+    const r = await fetch(API.pdf+'/export/'+lastTripId);
+    if(!r.ok)throw new Error('导出失败');
+    const b = await r.blob();
+    const u = URL.createObjectURL(b);
+    const a = document.createElement('a');a.href=u;a.download='trip_'+lastTripId.slice(0,8)+'.pdf';a.click();
+    URL.revokeObjectURL(u);
+    alertMsg('PDF已下载','success');
+  }catch(e){alertMsg('PDF导出失败：'+e.message)}
+}
+
+// === Weather + Wardrobe ===
+async function queryWeather(){
+  const city = _('w-city').value.trim();
+  if(!city){alertMsg('请输入城市名称');return}
+  hideResult('w-result');showLoading('w-loading');
+  try{
+    const d = await apiFetch(API.weather+'/forecast?city='+encodeURIComponent(city)+'&days=7');
+    hideLoading('w-loading');
+    let html = '<div class="flex gap-2 mb-3 flex-wrap"><span class="tag tag-pri">'+d.city+'</span><span class="tag tag-info">'+d.days+'天预报</span></div>';
+    if(d.forecast){
+      const lines = d.forecast.split('\n');
+      lines.forEach(line => {
+        if(line.trim()) html += '<div class="weather-card"><p>'+line.trim()+'</p></div>';
+      });
+    }
+    showResult('w-result',html);
+  }catch(e){hideLoading('w-loading');alertMsg('天气查询失败：'+e.message)}
+}
+
+async function getWardrobe(){
+  const city = _('wr-city').value.trim();
+  if(!city){alertMsg('请输入城市名称');return}
+  hideResult('wr-result');showLoading('wr-loading');
+  try{
+    const d = await apiFetch(API.wardrobe+'/recommend?city='+encodeURIComponent(city));
+    hideLoading('wr-loading');
+    let html = '<div class="wardrobe-card"><h4>🧣 '+d.city+'穿搭推荐</h4>';
+    if(d.recommendation){
+      const lines = d.recommendation.split('\n');
+      lines.forEach(line => { if(line.trim()) html += '<p>'+line.trim()+'</p>' });
+    }
+    html += '</div>';
+    showResult('wr-result',html);
+  }catch(e){hideLoading('wr-loading');alertMsg('穿搭推荐失败：'+e.message)}
+}
+
+// === Budget Split ===
+function addBudgetItem(){
+  const c = _('b-items');
+  const row = document.createElement('div');row.className='row';
+  row.innerHTML = '<input class="b-name" placeholder="费用项目" value=""><input class="b-amt" type="number" placeholder="金额(元)" value="0" min="0"><button class="btn btn-del btn-sm" onclick="this.parentElement.remove()">✖</button>';
+  c.appendChild(row);
+}
+
+async function calcBudget(){
+  const items = [];
+  document.querySelectorAll('#b-items .row').forEach(r => {
+    const name = r.querySelector('.b-name').value.trim();
+    const amt = parseFloat(r.querySelector('.b-amt').value) || 0;
+    if(name && amt > 0) items.push({name:name,amount:amt});
+  });
+  const ppl = parseInt(_('b-ppl').value);
+  if(!ppl || ppl<1){alertMsg('请输入有效人数');return}
+  if(!items.length){alertMsg('请添加费用项目');return}
+  hideResult('b-result');showLoading('b-loading');
+  try{
+    const d = await apiFetch(API.budget+'/split',{method:'POST',body:JSON.stringify({person_count:ppl,items:items,trip_id:''})});
+    hideLoading('b-loading');
+    let html = '<div class="flex gap-2 mb-3 flex-wrap"><span class="tag tag-suc">💰 总计: ¥'+d.total_amount+'</span><span class="tag tag-pri">👥 '+d.person_count+'人</span><span class="tag tag-warn">💵 人均: ¥'+d.per_person+'</span></div><table><tr><th>项目</th><th style="text-align:right">金额</th></tr>';
+    d.items.forEach(i => { html += '<tr><td>'+i.name+'</td><td style="text-align:right">¥'+i.amount+'</td></tr>' });
+    html += '<tr><td><b>合计</b></td><td style="text-align:right"><b>¥'+d.total_amount+'</b></td></tr></table>';
+    showResult('b-result',html);
+  }catch(e){hideLoading('b-loading');alertMsg('计算失败：'+e.message)}
+}
+
+// === Map / POI Search ===
+let mapInstance = null;
+let mapMarkers = [];
+
+function initMap(centerLat, centerLng) {
+  const container = document.getElementById('map-container');
+  container.style.display = 'block';
+  if (mapInstance) {
+    mapInstance.invalidateSize();
+    return mapInstance;
+  }
+  mapInstance = L.map('map-container').setView([centerLat, centerLng], 12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://openstreetmap.org/copyright">OSM</a>',
+    maxZoom: 18
+  }).addTo(mapInstance);
+  setTimeout(() => mapInstance.invalidateSize(), 300);
+  return mapInstance;
+}
+
+function addMapMarkers(places) {
+  if (!mapInstance) return;
+  mapMarkers.forEach(m => mapInstance.removeLayer(m));
+  mapMarkers = [];
+  if (!places || places.length === 0) return;
+  const bounds = [];
+  places.forEach(p => {
+    const lat = parseFloat(p.lat);
+    const lng = parseFloat(p.lng);
+    if (!isNaN(lat) && !isNaN(lng)) {
+      const popupHtml = '<strong>' + p.name + '</strong><br/>'
+        + (p.description ? p.description + '<br/>' : '')
+        + (p.address ? p.address : '')
+        + (p.rating ? '<br/>\u2b50 ' + p.rating + '/5' : '');
+      const marker = L.marker([lat, lng])
+        .addTo(mapInstance)
+        .bindPopup(popupHtml);
+      mapMarkers.push(marker);
+      bounds.push([lat, lng]);
+    }
+  });
+  if (bounds.length > 0) {
+    mapInstance.fitBounds(bounds, { padding: [40, 40] });
+  }
+}
+
+async function searchMap() {
+  const city = _('m-city').value.trim();
+  const type = _('m-type').value;
+  if (!city) { alertMsg('请输入城市名称'); return; }
+  hideResult('m-result');
+  showLoading('m-loading');
+  document.getElementById('map-container').style.display = 'none';
+  try {
+    const d = await apiFetch(API.map + '/places?city=' + encodeURIComponent(city) + '&keyword=' + encodeURIComponent(type) + '&page_size=10');
+    hideLoading('m-loading');
+    const places = d.places || [];
+    let html = '<div class="flex gap-2 mb-3 flex-wrap"><span class="tag tag-pri">' + city + '</span><span class="tag tag-info">' + type + '</span><span class="tag tag-suc">\U0001f5fa ' + places.length + '个景点</span></div>';
+    if (places.length === 0) {
+      html += '<div class="empty-state"><div class="icon">\U0001f50d</div><p>未找到相关景点</p></div>';
+      showResult('m-result', html);
+      return;
+    }
+    places.forEach(p => {
+      const locStr = p.lat && p.lng ? p.lng + ',' + p.lat : '';
+      html += '<div class="map-item">';
+      html += '<h4>\U0001f3d4 ' + p.name + (p.rating ? ' <span style="color:#f59e0b">\u2b50' + p.rating + '</span>' : '') + '</h4>';
+      if (p.description) html += '<p>' + p.description + '</p>';
+      html += '<p>地址：' + (p.address || '暂无') + '</p>';
+      if (locStr) html += '<p class="coord">坐标：' + locStr + '</p>';
+      html += '</div>';
+    });
+    showResult('m-result', html);
+    if (places.length > 0) {
+      const firstLat = parseFloat(places[0].lat);
+      const firstLng = parseFloat(places[0].lng);
+      if (!isNaN(firstLat) && !isNaN(firstLng)) {
+        initMap(firstLat, firstLng);
+        addMapMarkers(places);
+      }
+    }
+  } catch (e) {
+    hideLoading('m-loading');
+    alertMsg('检索失败：' + e.message);
+  }
+}
+
+async function generateMap() {
+  const city = _('m-city').value.trim();
+  const type = _('m-type').value;
+  if (!city) { alertMsg('请输入城市名称'); return; }
+  const wrapper = document.getElementById('llm-map-wrapper');
+  const frame = document.getElementById('llm-map-frame');
+  wrapper.style.display = 'none';
+  showLoading('m-loading');
+  try {
+    // 调用 AI 生成地图 HTML
+    const resp = await fetch(API.map + '/generate?city=' + encodeURIComponent(city) + '&keyword=' + encodeURIComponent(type) + '&page_size=10');
+    if (!resp.ok) throw new Error('地图生成失败 (' + resp.status + ')');
+    const html = await resp.text();
+    hideLoading('m-loading');
+    // 将 HTML 注入 iframe
+    const blob = new Blob([html], { type: 'text/html; charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    frame.src = url;
+    wrapper.style.display = 'block';
+    wrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (e) {
+    hideLoading('m-loading');
+    alertMsg('AI 地图生成失败：' + e.message);
+  }
+}
+
+// === History ===
+async function loadHistory(){
+  const list = _('h-list');const stats = _('h-stats');
+  list.innerHTML = '<div class="loading show"><div class="spinner"></div>加载中……</div>';
+  try{
+    const d = await apiFetch(API.trip+'/history');
+    if(!d.length){
+      list.innerHTML = '<div class="empty-state"><div class="icon">📋</div><p>暂无历史行程</p></div>';
+      stats.innerHTML = '';
+      return;
+    }
+    stats.innerHTML = '<div class="stat-card"><div class="stat-value">'+d.length+'</div><div class="stat-label">总行程数</div></div><div class="stat-card"><div class="stat-value">'+d[0].destination+'</div><div class="stat-label">最近目的地</div></div>';
+    let html = '';
+    d.forEach(t => {
+      html += '<div class="trip-item" onclick="viewHistory(\'+t.id+\')"><div class="trip-info"><div class="trip-name">'+t.destination+'</div><div class="trip-meta">'+t.days+'天 · '+new Date(t.created_at).toLocaleString()+' · '+t.creator+'</div></div><div class="trip-actions"><button class="btn btn-out btn-sm" onclick="event.stopPropagation();exportHistoryPdf(\'+t.id+\')">PDF</button></div></div>';
+    });
+    list.innerHTML = html;
+  }catch(e){list.innerHTML = '<div class="empty-state"><div class="icon">⚠️</div><p>加载失败</p></div>';alertMsg('加载历史失败：'+e.message)}
+}
+
+async function viewHistory(id){
+  const det = _('h-detail');det.innerHTML = '<div class="loading show"><div class="spinner"></div></div>';det.classList.add('show');
+  try{
+    const d = await apiFetch(API.trip+'/'+id);
+    let html = '<div class="flex gap-2 mb-3 flex-wrap"><span class="tag tag-suc">'+d.destination+' '+d.days+'天</span><span class="tag tag-pri">#'+d.id.slice(0,8)+'</span><span class="tag tag-info">'+new Date(d.created_at).toLocaleString()+'</span></div><pre>'+d.details+'</pre><div class="flex gap-2 mt-3"><button class="btn btn-pri btn-sm" onclick="exportHistoryPdf(\'+d.id+\')">📄 导出PDF</button></div>';
+    det.innerHTML = html;
+  }catch(e){det.innerHTML = '<div class="empty-state"><p>查询失败</p></div>';alertMsg('查询失败：'+e.message)}
+}
+
+async function exportHistoryPdf(id){
+  try{
+    const r = await fetch(API.pdf+'/export/'+id);
+    if(!r.ok)throw new Error('导出失败');
+    const b = await r.blob();
+    const u = URL.createObjectURL(b);
+    const a = document.createElement('a');a.href=u;a.download='trip_'+id.slice(0,8)+'.pdf';a.click();
+    URL.revokeObjectURL(u);
+    alertMsg('PDF已下载','success');
+  }catch(e){alertMsg('PDF导出失败：'+e.message)}
+}
+
+// Init
+loadHistory();
+</script>
+</body>
+</html>
