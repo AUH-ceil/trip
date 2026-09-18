@@ -31,7 +31,7 @@ class TripAgent:
             temperature=0.7,
             max_tokens=4096,
         )
-
+#aaad
     def _register_tools(self) -> list:
         """注册所有 Agent Skill 工具（使用 @tool 装饰器）"""
 
